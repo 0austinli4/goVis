@@ -163,9 +163,6 @@ func initializeForks(win *pixelgl.Window) {
 }
 
 func drawNewFrame(win *pixelgl.Window) {
-	globalLock.Lock()
-	defer globalLock.Unlock()
-
 	forkPic, _ := loadPicture("fork.png")
 	standing, _ := loadPicture("hiking.png")
 	eating, _ := loadPicture("gamer.png")
@@ -234,7 +231,7 @@ func drawNewFrame(win *pixelgl.Window) {
 		basicTxt.Draw(win, pixel.IM)
 	}
 	basicTxt.Draw(win, pixel.IM)
-
+	win.Update()
 	for !win.JustPressed(pixelgl.MouseButtonLeft) {
 		win.Update()
 	}
@@ -242,8 +239,6 @@ func drawNewFrame(win *pixelgl.Window) {
 
 func updateEat(p *Philosopher) {
 	philosophers[nameToIndex[p.name]].eating = !(philosophers[nameToIndex[p.name]].eating)
-	forks[p.left].owner = p.name
-	forks[p.right].owner = p.name
 }
 
 func (p *Philosopher) Think(win *pixelgl.Window) {
@@ -262,17 +257,18 @@ func (p *Philosopher) Eat(win *pixelgl.Window) {
 }
 
 func (p *Philosopher) Dine(win *pixelgl.Window) {
-	globalLock.Lock()
-	defer globalLock.Unlock()
 	for {
 		p.Think(win)
 
 		table[p.left].Lock()
 		fmt.Printf("%s picks up fork %d.\n", p.name, p.left)
+		forks[p.left].owner = p.name
 		textSeg = append(textSeg, p.name+" picks up fork "+fmt.Sprint(p.left))
+
 		runtime.Gosched() // hack to yield to the next goroutine
 
 		table[p.right].Lock()
+		forks[p.right].owner = p.name
 		fmt.Printf("%s picks up %d.\n", p.name, p.right)
 		textSeg = append(textSeg, p.name+" picks up fork "+fmt.Sprint(p.right))
 
@@ -282,22 +278,23 @@ func (p *Philosopher) Dine(win *pixelgl.Window) {
 		drawNewFrame(win)
 
 		table[p.right].Unlock()
+		forks[p.right].owner = ""
 		fmt.Printf("%s puts down fork %d.\n", p.name, p.right)
 		textSeg = append(textSeg, p.name+" puts down fork "+fmt.Sprint(p.right))
 
 		table[p.left].Unlock()
+		forks[p.left].owner = ""
 		fmt.Printf("%s puts down fork %d.\n", p.name, p.left)
 		textSeg = append(textSeg, p.name+" puts down fork "+fmt.Sprint(p.left))
 
 		updateEat(p)
 		drawNewFrame(win)
-
 	}
 }
 
 func run() {
-	//var wg sync.WaitGroup
-	//wg.Add(1)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	cfg := pixelgl.WindowConfig{
 		Title:  "Pixel Rocks!",
 		Bounds: pixel.R(0, 0, 1024, 768),
@@ -317,14 +314,13 @@ func run() {
 		win.Update()
 	}
 
-	for !win.Closed() {
-		for _, philosopher := range philosophers {
-			go func(p *Philosopher) {
-				p.Dine(win)
-			}(philosopher)
-		}
+	for _, philosopher := range philosophers {
+		go func(p *Philosopher) {
+			p.Dine(win)
+		}(philosopher)
 	}
-	//wg.Wait()
+
+	wg.Wait()
 
 }
 
