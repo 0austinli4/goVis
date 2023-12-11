@@ -67,11 +67,11 @@ func initializePhilosophers(win *pixelgl.Window) {
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 
 	philosophers = []*Philosopher{
-		{"Michelle", 0, 0, 1, spritePos, spritePos, false},
-		{"Bill", 0, 1, 2, spritePos, spritePos, false},
-		{"Sonia", 0, 2, 3, spritePos, spritePos, false},
-		{"Brooke", 0, 3, 4, spritePos, spritePos, false},
-		{"Eric", 0, 4, 0, spritePos, spritePos, false},
+		{"Brandon", 0, 0, 1, spritePos, spritePos, false},
+		{"Sol", 0, 1, 2, spritePos, spritePos, false},
+		{"Irene", 0, 2, 3, spritePos, spritePos, false},
+		{"Sophie", 0, 3, 4, spritePos, spritePos, false},
+		{"David", 0, 4, 0, spritePos, spritePos, false},
 	}
 	// assign name to index for animation
 	i := 0
