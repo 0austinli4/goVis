@@ -20,26 +20,27 @@ import (
 )
 
 type Philosopher struct {
-	name      string       // name of philosopher
-	count     int          // count number of times they eat
-	left      int          // fork number on the left
-	right     int          // fork number on the right
-	gopher    pixel.Sprite // animation
+	name      string // name of philosopher
+	count     int    // count number of times they eat
+	left      int    // fork number on the left
+	right     int    // fork number on the right
 	spritePos pixel.Vec
+	textPos   pixel.Vec
 	eating    bool
 }
 
 type Fork struct {
-	index   int // name of philosopher
-	owner   string
-	forkPic pixel.Sprite // animation
-	mat     pixel.Matrix
+	owner string // name of philosopher
+	mat   pixel.Matrix
+	pos   pixel.Vec
 }
 
 var philosophers []*Philosopher = make([]*Philosopher, 0)
 var nameToIndex = make(map[string]int)
-
+var textSeg []string = make([]string, 0)
+var table []sync.Mutex = make([]sync.Mutex, 5)
 var forks []*Fork
+var globalLock sync.Mutex
 
 func loadPicture(path string) (pixel.Picture, error) {
 	file, err := os.Open(path)
@@ -54,58 +55,40 @@ func loadPicture(path string) (pixel.Picture, error) {
 	return pixel.PictureDataFromImage(img), nil
 }
 
-// func initializeDrawing(win *pixelgl.Window) {
-// 	for i := 0; i < len(philosophers); i++ {
-// 		sprite := philosophers[i].gopher
-// 		mat := philosophers[i].mat
-// 		sprite.Draw(win, mat)
-
-// 		spriteFork := forks[i].forkPic
-// 		matFork := forks[i].mat
-
-// 		spriteFork.Draw(win, matFork)
-// 	}
-
-// 	for !win.Closed() {
-// 		win.Update()
-// 	}
-// }
-
 func initializePhilosophers(win *pixelgl.Window) {
 	pic, err := loadPicture("hiking.png")
 	if err != nil {
 		panic(err)
 	}
-
 	sprite := pixel.NewSprite(pic, pic.Bounds())
 	spritePos := pixel.V(0, 0)
+	textPos := pixel.V(0, 0)
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 
 	philosophers = []*Philosopher{
-		{"Michelle", 0, 0, 1, *sprite, spritePos, false},
-		{"Bill", 0, 1, 2, *sprite, spritePos, false},
-		{"Sonia", 0, 2, 3, *sprite, spritePos, false},
-		{"Brooke", 0, 3, 4, *sprite, spritePos, false},
-		{"Eric", 0, 4, 0, *sprite, spritePos, false},
+		{"Michelle", 0, 0, 1, spritePos, spritePos, false},
+		{"Bill", 0, 1, 2, spritePos, spritePos, false},
+		{"Sonia", 0, 2, 3, spritePos, spritePos, false},
+		{"Brooke", 0, 3, 4, spritePos, spritePos, false},
+		{"Eric", 0, 4, 0, spritePos, spritePos, false},
 	}
+	// assign name to index for animation
 	i := 0
-
 	for _, p := range philosophers {
 		nameToIndex[p.name] = i
 		i++
 	}
-	fmt.Println(nameToIndex)
-
+	// declare initial circle
 	centerX := (win.Bounds().Center()).X
 	centerY := (win.Bounds().Center()).Y
 	radius := 300.0
 	numSprites := len(philosophers)
-
 	angleIncrement := (2 * math.Pi) / float64(numSprites)
 	initialAngle := math.Pi / 2 // Start from the top
 
 	for i := 0; i < numSprites; i++ {
 		angle := initialAngle + float64(i)*angleIncrement
-		spritePos := pixel.V(
+		spritePos = pixel.V(
 			centerX+radius*math.Cos(angle),
 			centerY+radius*math.Sin(angle),
 		)
@@ -113,7 +96,27 @@ func initializePhilosophers(win *pixelgl.Window) {
 		mat = mat.ScaledXY(spritePos, pixel.V(0.15, 0.15))
 		philosophers[i].spritePos = spritePos
 		sprite.Draw(win, mat)
+
+		radiusText := 220.0
+		textPos := pixel.V(
+			centerX-70+radiusText*math.Cos(angle),
+			centerY+radiusText*math.Sin(angle),
+		)
+		philosophers[i].textPos = textPos
+		basicTxt := text.New(textPos, basicAtlas)
+		basicTxt.Color = colornames.Black
+		fmt.Fprintln(basicTxt, philosophers[i].name)
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.5))
 	}
+
+	textPos = pixel.V(
+		win.Bounds().Max.X/2-200,
+		win.Bounds().Max.Y-float64(100),
+	)
+	basicTxt := text.New(textPos, basicAtlas)
+	basicTxt.Color = colornames.Black
+	fmt.Fprintln(basicTxt, "CLICK TO START")
+	basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
 }
 
 func initializeForks(win *pixelgl.Window) {
@@ -126,11 +129,11 @@ func initializeForks(win *pixelgl.Window) {
 	mat := pixel.IM
 
 	forks = []*Fork{
-		{0, "", *sprite, mat},
-		{0, "", *sprite, mat},
-		{0, "", *sprite, mat},
-		{0, "", *sprite, mat},
-		{0, "", *sprite, mat},
+		{"", mat, pixel.V(0, 0)},
+		{"", mat, pixel.V(0, 0)},
+		{"", mat, pixel.V(0, 0)},
+		{"", mat, pixel.V(0, 0)},
+		{"", mat, pixel.V(0, 0)},
 	}
 
 	centerX := (win.Bounds().Center()).X
@@ -139,7 +142,7 @@ func initializeForks(win *pixelgl.Window) {
 	numSprites := len(forks)
 
 	angleIncrement := (2 * math.Pi) / float64(numSprites)
-	initialAngle := math.Pi/2 + math.Pi/4 // Start from the top
+	initialAngle := math.Pi/2 + (-0.5)*math.Pi/4 // Start from the top
 
 	for i := 0; i < numSprites; i++ {
 		angle := initialAngle + float64(i)*angleIncrement
@@ -149,12 +152,20 @@ func initializeForks(win *pixelgl.Window) {
 		)
 		mat := pixel.IM
 		mat = mat.ScaledXY(spritePos, pixel.V(0.15, 0.15))
+		spritePos = pixel.V(
+			centerX+radius*math.Cos(angle)-50,
+			centerY+radius*math.Sin(angle)-50,
+		)
+		forks[i].pos = spritePos
 		forks[i].mat = mat
 		sprite.Draw(win, mat)
 	}
 }
 
 func drawNewFrame(win *pixelgl.Window) {
+	globalLock.Lock()
+	defer globalLock.Unlock()
+
 	forkPic, _ := loadPicture("fork.png")
 	standing, _ := loadPicture("hiking.png")
 	eating, _ := loadPicture("gamer.png")
@@ -164,14 +175,23 @@ func drawNewFrame(win *pixelgl.Window) {
 	spriteEat := pixel.NewSprite(eating, eating.Bounds())
 
 	// clear frame
-	win.Clear(colornames.White)
+	win.Clear(colornames.Aliceblue)
 
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+
+	// draw visual for forks
 	for i := 0; i < len(forks); i++ {
 		mat := forks[i].mat
 		spriteFork.Draw(win, mat)
-	}
-	// angle := 0.0
 
+		basicTxt := text.New(forks[i].pos, basicAtlas)
+		basicTxt.Color = colornames.Black
+
+		fmt.Fprintln(basicTxt, fmt.Sprint(i))
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.2))
+	}
+
+	// draw philosophers and names
 	for i := 0; i < len(philosophers); i++ {
 		spritePos := philosophers[i].spritePos
 		mat := pixel.IM
@@ -182,27 +202,51 @@ func drawNewFrame(win *pixelgl.Window) {
 			mat = mat.ScaledXY(spritePos, pixel.V(0.15, 0.15))
 			spriteStand.Draw(win, mat)
 		}
+		textPos := philosophers[i].textPos
+		basicTxt := text.New(textPos, basicAtlas)
+		basicTxt.Color = colornames.Black
+		fmt.Fprintln(basicTxt, philosophers[i].name)
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.5))
+	}
+
+	// draw philosophers and names
+	basicTxt := text.New(pixel.V(20, 80), basicAtlas)
+	basicTxt.Color = colornames.Black
+
+	// draw latest actions, limiting at 10 length
+	if len(textSeg) > 8 {
+		// Remove the first element if the queue length exceeds 10
+		textSeg = textSeg[len(textSeg)-8:]
+	}
+	fmt.Fprintln(basicTxt, "Order of Actions")
+	for _, segment := range textSeg {
+		fmt.Fprintln(basicTxt, segment)
+	}
+	basicTxt.Draw(win, pixel.IM)
+
+	// draw forks and ownership
+	for i, fork := range forks {
+		textstr := "Fork " + fmt.Sprint(i) + ": " + fork.owner
+		textPos := pixel.V(win.Bounds().Max.X-200, win.Bounds().Max.Y-100-float64(20*i))
+		basicTxt = text.New(textPos, basicAtlas)
+		basicTxt.Color = colornames.Black
+		fmt.Fprintln(basicTxt, textstr)
+		basicTxt.Draw(win, pixel.IM)
+	}
+	basicTxt.Draw(win, pixel.IM)
+
+	for !win.JustPressed(pixelgl.MouseButtonLeft) {
+		win.Update()
 	}
 }
 
-func updateEat(index int) {
-	philosophers[index].eating = true
+func updateEat(p *Philosopher) {
+	philosophers[nameToIndex[p.name]].eating = !(philosophers[nameToIndex[p.name]].eating)
+	forks[p.left].owner = p.name
+	forks[p.right].owner = p.name
 }
 
-func drawText(textSeg string, win *pixelgl.Window) {
-	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-	basicTxt := text.New(pixel.V(100, 650), basicAtlas)
-	basicTxt.Color = colornames.Black // Set the text color to Red
-
-	fmt.Fprintln(basicTxt, textSeg)
-	// basicAtlas = text.NewAtlas(basicfont.Face7x13, text.ASCII)
-	// basicTxt := text.New(pixel.V(300, 800), basicAtlas)
-
-	// fmt.Fprintln(basicTxt, textSeg)
-	basicTxt.Draw(win, pixel.IM)
-}
-
-func (p *Philosopher) Think() {
+func (p *Philosopher) Think(win *pixelgl.Window) {
 	fmt.Println(p.name, "is thinking.")
 	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
 	fmt.Println(p.name, "is done thinking.")
@@ -210,33 +254,50 @@ func (p *Philosopher) Think() {
 
 func (p *Philosopher) Eat(win *pixelgl.Window) {
 	p.count++
-	textStr := (p.name + " is eating round:" + fmt.Sprint(p.count))
-	updateEat(nameToIndex[p.name])
-	drawNewFrame(win)
-	drawText(textStr, win)
+	//textSeg = append(textSeg, p.name+" is eating round:"+fmt.Sprint(p.count))
 	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+
 	fmt.Println(p.name, "is done eating.")
+	//textSeg = append(textSeg, p.name+" is eating round:"+fmt.Sprint(p.count))
 }
-func (p *Philosopher) Dine(table []sync.Mutex, win *pixelgl.Window) {
+
+func (p *Philosopher) Dine(win *pixelgl.Window) {
+	globalLock.Lock()
+	defer globalLock.Unlock()
 	for {
-		p.Think()
+		p.Think(win)
+
 		table[p.left].Lock()
 		fmt.Printf("%s picks up fork %d.\n", p.name, p.left)
+		textSeg = append(textSeg, p.name+" picks up fork "+fmt.Sprint(p.left))
 		runtime.Gosched() // hack to yield to the next goroutine
+
 		table[p.right].Lock()
 		fmt.Printf("%s picks up %d.\n", p.name, p.right)
+		textSeg = append(textSeg, p.name+" picks up fork "+fmt.Sprint(p.right))
+
+		textSeg = append(textSeg, p.name+" is eating round:"+fmt.Sprint(p.count))
 		p.Eat(win)
+		updateEat(p)
+		drawNewFrame(win)
+
 		table[p.right].Unlock()
 		fmt.Printf("%s puts down fork %d.\n", p.name, p.right)
+		textSeg = append(textSeg, p.name+" puts down fork "+fmt.Sprint(p.right))
+
 		table[p.left].Unlock()
 		fmt.Printf("%s puts down fork %d.\n", p.name, p.left)
+		textSeg = append(textSeg, p.name+" puts down fork "+fmt.Sprint(p.left))
+
+		updateEat(p)
+		drawNewFrame(win)
+
 	}
 }
 
 func run() {
-	// var wg sync.WaitGroup
-	// wg.Add(1)
-
+	//var wg sync.WaitGroup
+	//wg.Add(1)
 	cfg := pixelgl.WindowConfig{
 		Title:  "Pixel Rocks!",
 		Bounds: pixel.R(0, 0, 1024, 768),
@@ -249,76 +310,45 @@ func run() {
 	}
 	win.Clear(colornames.Aliceblue)
 
-	// table := make([]sync.Mutex, len(philosophers))
-
 	initializeForks(win)
 	initializePhilosophers(win)
-	//drawTable(win)
-	drawText("dafuq", win)
 
-	i := 0
-	updateEat(i)
-	drawNewFrame(win)
-	for !win.Closed() {
-		// Existing code...
-		if win.JustPressed(pixelgl.MouseButtonLeft) {
-			updateEat(i)
-			drawNewFrame(win)
-			i += 1
-		}
+	for !win.JustPressed(pixelgl.MouseButtonLeft) {
 		win.Update()
 	}
-	// for _, philosopher := range philosophers {
-	// 	go func(p *Philosopher) {
-	// 		p.Dine(table, win)
-	// 		// win.Update()
-	// 	}(philosopher)
-	// }
-	// wg.Wait()
 
-	// i := 0
-	// for !win.Closed() {
-	// 	updateEat(i)
-	// 	drawNewFrame(win)
-	// 	i += 1
-	// 	time.Sleep(5 * time.Second)
-	// 	win.Update()
-	// }
-
-}
-
-func drawTable(win *pixelgl.Window) {
-	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-
-	// Data for the table (example)
-	tableData := [][]string{
-		{"Fork 1", "Philosopher 1"},
-		{"Fork 2", "Philosopher 2"},
-		{"Fork 3", "Philosopher 3"},
-		{"Fork 4", "Philosopher 4"},
-	}
-
-	// Calculate text position for the table (top right corner)
-	tableStartX := win.Bounds().Max.X - 200 // Adjust the position as needed
-	tableStartY := win.Bounds().Max.Y - 30  // Adjust the position as needed
-
-	// Draw the table
-	for i, row := range tableData {
-		for j := range row {
-			textPos := pixel.V(tableStartX+float64(j*50), tableStartY-float64(i*20))
-			basicTxt := text.New(textPos, basicAtlas)
-			basicTxt.Color = colornames.Black
-			fmt.Fprintln(basicTxt, tableData[i][0])
-
-			textPos = pixel.V(tableStartX+float64(j*50)+20, tableStartY-float64(i*20))
-			basicTxt = text.New(textPos, basicAtlas)
-			fmt.Fprintln(basicTxt, tableData[i][1])
-			// basicTxt.Draw(win, pixel.IM.Scaled(textPos, 4))
-
+	for !win.Closed() {
+		for _, philosopher := range philosophers {
+			go func(p *Philosopher) {
+				p.Dine(win)
+			}(philosopher)
 		}
 	}
+	//wg.Wait()
 
 }
+
+// 	// Calculate text position for the table (top right corner)
+// 	tableStartX := win.Bounds().Max.X - 200 // Adjust the position as needed
+// 	tableStartY := win.Bounds().Max.Y - 30  // Adjust the position as needed
+
+// 	// Draw the table
+// 	for i, row := range tableData {
+// 		for j := range row {
+// 			textPos := pixel.V(tableStartX+float64(j*50), tableStartY-float64(i*20))
+// 			basicTxt := text.New(textPos, basicAtlas)
+// 			basicTxt.Color = colornames.Black
+// 			fmt.Fprintln(basicTxt, tableData[i][0])
+
+// 			textPos = pixel.V(tableStartX+float64(j*50)+20, tableStartY-float64(i*20))
+// 			basicTxt = text.New(textPos, basicAtlas)
+// 			fmt.Fprintln(basicTxt, tableData[i][1])
+// 			// basicTxt.Draw(win, pixel.IM.Scaled(textPos, 4))
+
+// 		}
+// 	}
+
+// }
 
 // func channel(win *pixelgl.Window, message string) {
 // 	// Draw a rectangle
