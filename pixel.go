@@ -40,8 +40,8 @@ var nameToIndex = make(map[string]int)
 var textSeg []string = make([]string, 0)
 var table []sync.Mutex = make([]sync.Mutex, 5)
 var forks []*Fork
-var globalLock sync.Mutex
 
+// load in png pictures
 func loadPicture(path string) (pixel.Picture, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -55,6 +55,7 @@ func loadPicture(path string) (pixel.Picture, error) {
 	return pixel.PictureDataFromImage(img), nil
 }
 
+// initialize philsopohers animation (5 gopghers in circle)
 func initializePhilosophers(win *pixelgl.Window) {
 	pic, err := loadPicture("hiking.png")
 	if err != nil {
@@ -62,7 +63,7 @@ func initializePhilosophers(win *pixelgl.Window) {
 	}
 	sprite := pixel.NewSprite(pic, pic.Bounds())
 	spritePos := pixel.V(0, 0)
-	textPos := pixel.V(0, 0)
+	//textPos := pixel.V(0, 0)
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 
 	philosophers = []*Philosopher{
@@ -99,7 +100,7 @@ func initializePhilosophers(win *pixelgl.Window) {
 
 		radiusText := 220.0
 		textPos := pixel.V(
-			centerX-70+radiusText*math.Cos(angle),
+			centerX-80+radiusText*math.Cos(angle),
 			centerY+radiusText*math.Sin(angle),
 		)
 		philosophers[i].textPos = textPos
@@ -108,8 +109,8 @@ func initializePhilosophers(win *pixelgl.Window) {
 		fmt.Fprintln(basicTxt, philosophers[i].name)
 		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.5))
 	}
-
-	textPos = pixel.V(
+	// text position for CLICK TO START
+	textPos := pixel.V(
 		win.Bounds().Max.X/2-200,
 		win.Bounds().Max.Y-float64(100),
 	)
@@ -119,6 +120,7 @@ func initializePhilosophers(win *pixelgl.Window) {
 	basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
 }
 
+// initialize forks
 func initializeForks(win *pixelgl.Window) {
 	pic, err := loadPicture("fork.png")
 	if err != nil {
@@ -162,6 +164,8 @@ func initializeForks(win *pixelgl.Window) {
 	}
 }
 
+// draw one new frame of animation
+// updates: philsopohers, fork ownership, display of actions in text
 func drawNewFrame(win *pixelgl.Window) {
 	forkPic, _ := loadPicture("fork.png")
 	standing, _ := loadPicture("hiking.png")
@@ -182,7 +186,7 @@ func drawNewFrame(win *pixelgl.Window) {
 		spriteFork.Draw(win, mat)
 
 		basicTxt := text.New(forks[i].pos, basicAtlas)
-		basicTxt.Color = colornames.Black
+		basicTxt.Color = colornames.Blueviolet
 
 		fmt.Fprintln(basicTxt, fmt.Sprint(i))
 		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.2))
@@ -202,15 +206,13 @@ func drawNewFrame(win *pixelgl.Window) {
 		textPos := philosophers[i].textPos
 		basicTxt := text.New(textPos, basicAtlas)
 		basicTxt.Color = colornames.Black
-		fmt.Fprintln(basicTxt, philosophers[i].name)
-		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.5))
+		fmt.Fprintln(basicTxt, philosophers[i].name+" (Dined: "+fmt.Sprint(philosophers[i].count)+")")
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.2))
 	}
 
-	// draw philosophers and names
+	// draw latest 8 actions
 	basicTxt := text.New(pixel.V(20, 80), basicAtlas)
 	basicTxt.Color = colornames.Black
-
-	// draw latest actions, limiting at 10 length
 	if len(textSeg) > 8 {
 		// Remove the first element if the queue length exceeds 10
 		textSeg = textSeg[len(textSeg)-8:]
@@ -230,6 +232,7 @@ func drawNewFrame(win *pixelgl.Window) {
 		fmt.Fprintln(basicTxt, textstr)
 		basicTxt.Draw(win, pixel.IM)
 	}
+
 	basicTxt.Draw(win, pixel.IM)
 	win.Update()
 	for !win.JustPressed(pixelgl.MouseButtonLeft) {
@@ -237,25 +240,26 @@ func drawNewFrame(win *pixelgl.Window) {
 	}
 }
 
+// declare philosophers to be eating
 func updateEat(p *Philosopher) {
 	philosophers[nameToIndex[p.name]].eating = !(philosophers[nameToIndex[p.name]].eating)
 }
 
+// think function: delays by a random time
 func (p *Philosopher) Think(win *pixelgl.Window) {
 	fmt.Println(p.name, "is thinking.")
 	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
 	fmt.Println(p.name, "is done thinking.")
 }
 
+// eat function  -> take random time duration to finish eating
 func (p *Philosopher) Eat(win *pixelgl.Window) {
 	p.count++
-	//textSeg = append(textSeg, p.name+" is eating round:"+fmt.Sprint(p.count))
 	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
-
 	fmt.Println(p.name, "is done eating.")
-	//textSeg = append(textSeg, p.name+" is eating round:"+fmt.Sprint(p.count))
 }
 
+// Dine function : declares algorithm
 func (p *Philosopher) Dine(win *pixelgl.Window) {
 	for {
 		p.Think(win)
@@ -289,101 +293,6 @@ func (p *Philosopher) Dine(win *pixelgl.Window) {
 
 		updateEat(p)
 		drawNewFrame(win)
+
 	}
-}
-
-func run() {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	cfg := pixelgl.WindowConfig{
-		Title:  "Pixel Rocks!",
-		Bounds: pixel.R(0, 0, 1024, 768),
-		VSync:  true,
-	}
-
-	win, err := pixelgl.NewWindow(cfg)
-	if err != nil {
-		panic(err)
-	}
-	win.Clear(colornames.Aliceblue)
-
-	initializeForks(win)
-	initializePhilosophers(win)
-
-	for !win.JustPressed(pixelgl.MouseButtonLeft) {
-		win.Update()
-	}
-
-	for _, philosopher := range philosophers {
-		go func(p *Philosopher) {
-			p.Dine(win)
-		}(philosopher)
-	}
-
-	wg.Wait()
-
-}
-
-// 	// Calculate text position for the table (top right corner)
-// 	tableStartX := win.Bounds().Max.X - 200 // Adjust the position as needed
-// 	tableStartY := win.Bounds().Max.Y - 30  // Adjust the position as needed
-
-// 	// Draw the table
-// 	for i, row := range tableData {
-// 		for j := range row {
-// 			textPos := pixel.V(tableStartX+float64(j*50), tableStartY-float64(i*20))
-// 			basicTxt := text.New(textPos, basicAtlas)
-// 			basicTxt.Color = colornames.Black
-// 			fmt.Fprintln(basicTxt, tableData[i][0])
-
-// 			textPos = pixel.V(tableStartX+float64(j*50)+20, tableStartY-float64(i*20))
-// 			basicTxt = text.New(textPos, basicAtlas)
-// 			fmt.Fprintln(basicTxt, tableData[i][1])
-// 			// basicTxt.Draw(win, pixel.IM.Scaled(textPos, 4))
-
-// 		}
-// 	}
-
-// }
-
-// func channel(win *pixelgl.Window, message string) {
-// 	// Draw a rectangle
-// 	imd := imdraw.New(nil)
-// 	imd.Color = colornames.Blueviolet
-// 	imd.Push(pixel.V(0, 0), pixel.V(400, 200))
-// 	imd.Rectangle(0)
-// 	imd.Draw(win)
-
-// 	// Create a basic font
-// 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-// 	basicTxt := text.New(pixel.V(0, 0), basicAtlas)
-// 	basicTxt.Color = colornames.Black
-// 	basicTxt.WriteString(message)
-
-// 	// initial pos
-// 	textPos := pixel.V(0, 100)
-
-// 	// Move the message within the rectangle
-// 	for !win.Closed() {
-// 		win.Clear(colornames.White) // Clear the window with white color
-
-// 		// Update the text position (move to the right)
-// 		textPos.X += 2 // Adjust speed as needed
-
-// 		// Draw the rectangle
-// 		imd.Draw(win)
-
-// 		// Draw the text at the updated position
-// 		basicTxt.Draw(win, pixel.IM.Moved(textPos))
-// 		win.Update()
-
-// 		if textPos.X > 400 {
-// 			win.SetClosed(true)
-// 		}
-
-//		}
-//	}
-
-func main() {
-	pixelgl.Run(run)
 }
