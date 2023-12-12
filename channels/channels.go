@@ -6,7 +6,6 @@ import (
 	_ "image/png"
 	"runtime"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/gopxl/pixel"
@@ -25,18 +24,21 @@ var eventChannelsF []pixel.Vec = make([]pixel.Vec, 0)
 var eventsText map[string]pixel.Vec = make(map[string]pixel.Vec, 0)
 var names []pixel.Vec = make([]pixel.Vec, 0)
 
-var (
-	// Create a global mutex
-	mutex sync.Mutex
-)
+// var (
+// 	// Create a global mutex
+// 	mutex sync.Mutex
+// )
 
 func channel(win *pixelgl.Window, message string, rows int, index int, startPoint time.Duration, endPoint time.Duration, scale time.Duration) {
 	// length of the rectangle is determined by endPoint  - startPoint
-	offsetY := (win.Bounds().Max.Y / float64(rows)) * float64(index)
+	// offsetY := (win.Bounds().Max.Y / float64(rows)) * float64(index)
+	fmt.Println("CURRENT INDEX", index)
+	offsetY := float64(50.0 * index)
 
 	// beginning of rectangle is startPoint
+	// startRect := 0.0
 	startRect := (float64(startPoint) / float64(scale)) * win.Bounds().Max.X
-	length := (float64(endPoint-startPoint) / float64(scale)) * win.Bounds().Max.X
+	length := (float64(endPoint-startPoint)/float64(scale))*win.Bounds().Max.X - 1
 
 	// Draw a rectangle
 	eventChannelsS = append(eventChannelsS, pixel.V(startRect, win.Bounds().Max.Y-float64(index)*offsetY-20))
@@ -53,34 +55,42 @@ func channel(win *pixelgl.Window, message string, rows int, index int, startPoin
 
 func animateAll(win *pixelgl.Window) {
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+
 	win.Update()
 
 	for !win.Closed() {
-		win.Clear(colornames.White)
+		win.Clear(colornames.Aliceblue)
 		// Draw the rectangle
 		i := 0
 		for key := range events {
-			imd := imdraw.New(nil)
-			imd.Color = colornames.Green
-			imd.Push(eventChannelsS[i], eventChannelsF[i])
-			imd.Rectangle(0)
-			imd.Draw(win)
 
-			xPos := eventsText[key]
-			xPos.X += 4 // Adjust speed as needed
-			eventsText[key] = xPos
-
-			if eventsText["Main"].X > eventChannelsF[i].X {
-				lineDown(win, eventChannelsF[i])
-				eventChannelsF[i].X = 0
+			if key == "Main" {
+				xPos := eventsText[key]
+				xPos.X += 2 // Adjust speed as needed
+				eventsText[key] = xPos
 			}
 
-			basicTxt := text.New(names[i], basicAtlas)
-			basicTxt.Color = colornames.Black
-			fmt.Fprintln(basicTxt, key)
-			basicTxt.Draw(win, pixel.IM)
+			fmt.Println(eventChannelsS[i].X, eventChannelsF[i].X)
 
-			basicTxt = text.New(eventsText[key], basicAtlas)
+			if eventsText["Main"].X > eventChannelsS[i].X {
+				imd := imdraw.New(nil)
+				lineUp(imd, win, eventChannelsS[i], i)
+				imd.Color = colornames.Cadetblue
+				imd.Push(eventChannelsS[i], eventChannelsF[i])
+				imd.Rectangle(0)
+				imd.Draw(win)
+			}
+
+			if eventsText["Main"].X > eventChannelsF[i].X {
+				imd := imdraw.New(nil)
+				lineDown(imd, win, eventChannelsF[i])
+				imd.Color = colornames.Cadetblue
+				imd.Push(eventChannelsS[i], eventChannelsF[i])
+				imd.Rectangle(0)
+				imd.Draw(win)
+			}
+
+			basicTxt := text.New(eventsText[key], basicAtlas)
 			basicTxt.Color = colornames.Black
 			fmt.Fprintln(basicTxt, key)
 			basicTxt.Draw(win, pixel.IM)
@@ -101,27 +111,58 @@ func animateChannel(win *pixelgl.Window) {
 	i := 0
 
 	for key := range events {
+		if key == "Main" {
+			continue
+		}
 		startTime := events[key][0]
 		startPoint := startTime.Sub(universalStartTime)
 		endTime := events[key][1]
 		endPoint := endTime.Sub(universalStartTime)
-		fmt.Println("start point", startTime, "endPoint", endTime, "Scale: ", scale)
-		fmt.Println("printing channel")
 		channel(win, key, rows, i, startPoint, endPoint, scale)
 		i += 1
 	}
+	startTime := events["Main"][0]
+	startPoint := startTime.Sub(universalStartTime)
+	endTime := events["Main"][1]
+	endPoint := endTime.Sub(universalStartTime)
+	channel(win, "Main", rows, i, startPoint, endPoint, scale)
+
 	animateAll(win)
 }
 
-func lineDown(win *pixelgl.Window, pos pixel.Vec) {
-	fmt.Println(pos)
-	imd := imdraw.New(nil)
+func lineDown(imd *imdraw.IMDraw, win *pixelgl.Window, pos pixel.Vec) {
 	imd.Color = colornames.Black
-	imd.Clear()
-	imd.Push(pos, pixel.V(pos.X, 0)) // Draw a line from the current position down to Y=0
+	imd.Push(pos, pixel.V(pos.X, eventChannelsS[len(eventChannelsS)-1].Y))
 	imd.Line(2)
 	imd.Draw(win)
 }
+
+func lineUp(imd *imdraw.IMDraw, win *pixelgl.Window, pos pixel.Vec, index int) {
+	imd.Color = colornames.Black
+	imd.Push(pixel.V(pos.X, eventChannelsS[len(eventChannelsS)-1].Y), pixel.V(pos.X, eventChannelsF[index].Y))
+	imd.Line(2)
+	imd.Draw(win)
+}
+
+// func worker(done chan bool, win *pixelgl.Window) {
+// 	startTime := time.Now()
+// 	fmt.Print("working...")
+// 	time.Sleep(time.Second)
+// 	fmt.Println("done")
+// 	done <- true
+// 	endTime := time.Now()
+// 	events["Program 1"+fmt.Sprint(getGID)] = [2]time.Time{startTime, endTime}
+// }
+
+// func runChannel(win *pixelgl.Window) {
+// 	startTime := time.Now()
+// 	done := make(chan bool, 1)
+// 	go worker(done, win)
+// 	<-done
+// 	receiveTime := time.Now()
+// 	events["Main"+fmt.Sprint(getGID)] = [2]time.Time{startTime, receiveTime}
+// 	animateChannel(win)
+// }
 
 func runChannel(win *pixelgl.Window) {
 	startTime := time.Now()
@@ -135,6 +176,24 @@ func runChannel(win *pixelgl.Window) {
 	}()
 
 	msg := <-messages
+	fmt.Println(msg)
+
+	go func() {
+		funcTime := time.Now()
+		messages <- "ping"
+		funcEndTime := time.Now()
+		events["Program 2"] = [2]time.Time{funcTime, funcEndTime}
+	}()
+	msg = <-messages
+	fmt.Println(msg)
+
+	go func() {
+		funcTime := time.Now()
+		messages <- "ping"
+		funcEndTime := time.Now()
+		events["Program 3"] = [2]time.Time{funcTime, funcEndTime}
+	}()
+	msg = <-messages
 	receiveTime := time.Now()
 	fmt.Println(msg)
 	events["Main"] = [2]time.Time{startTime, receiveTime}
