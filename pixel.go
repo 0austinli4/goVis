@@ -167,9 +167,19 @@ func initializeForks(win *pixelgl.Window) {
 // draw one new frame of animation
 // updates: philsopohers, fork ownership, display of actions in text
 func drawNewFrame(win *pixelgl.Window) {
+
 	forkPic, _ := loadPicture("fork.png")
 	standing, _ := loadPicture("hiking.png")
 	eating, _ := loadPicture("gamer.png")
+
+	batchStand := pixel.NewBatch(&pixel.TrianglesData{}, standing)
+	batchStand.Clear()
+
+	batchEating := pixel.NewBatch(&pixel.TrianglesData{}, eating)
+	batchEating.Clear()
+
+	batchFork := pixel.NewBatch(&pixel.TrianglesData{}, forkPic)
+	batchFork.Clear()
 
 	spriteFork := pixel.NewSprite(forkPic, forkPic.Bounds())
 	spriteStand := pixel.NewSprite(standing, standing.Bounds())
@@ -183,7 +193,7 @@ func drawNewFrame(win *pixelgl.Window) {
 	// draw visual for forks
 	for i := 0; i < len(forks); i++ {
 		mat := forks[i].mat
-		spriteFork.Draw(win, mat)
+		spriteFork.Draw(batchFork, mat)
 
 		basicTxt := text.New(forks[i].pos, basicAtlas)
 		basicTxt.Color = colornames.Blueviolet
@@ -198,10 +208,10 @@ func drawNewFrame(win *pixelgl.Window) {
 		mat := pixel.IM
 		if philosophers[i].eating {
 			mat = mat.ScaledXY(spritePos, pixel.V(0.18, 0.18))
-			spriteEat.Draw(win, mat)
+			spriteEat.Draw(batchEating, mat)
 		} else {
 			mat = mat.ScaledXY(spritePos, pixel.V(0.15, 0.15))
-			spriteStand.Draw(win, mat)
+			spriteStand.Draw(batchStand, mat)
 		}
 		textPos := philosophers[i].textPos
 		basicTxt := text.New(textPos, basicAtlas)
@@ -209,6 +219,10 @@ func drawNewFrame(win *pixelgl.Window) {
 		fmt.Fprintln(basicTxt, philosophers[i].name+" (Dined: "+fmt.Sprint(philosophers[i].count)+")")
 		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.2))
 	}
+
+	batchStand.Draw(win)
+	batchEating.Draw(win)
+	batchFork.Draw(win)
 
 	// draw latest 8 actions
 	basicTxt := text.New(pixel.V(20, 80), basicAtlas)

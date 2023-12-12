@@ -31,25 +31,38 @@ var names []pixel.Vec = make([]pixel.Vec, 0)
 
 func channel(win *pixelgl.Window, message string, rows int, index int, startPoint time.Duration, endPoint time.Duration, scale time.Duration) {
 	// length of the rectangle is determined by endPoint  - startPoint
-	// offsetY := (win.Bounds().Max.Y / float64(rows)) * float64(index)
-	fmt.Println("CURRENT INDEX", index)
-	offsetY := float64(50.0 * index)
+
+	offsetY := (win.Bounds().Max.Y / float64(rows)) * float64(index)
+	if message == "Main" {
+		offsetY = 50
+	}
+	if offsetY < 50 {
+		offsetY = 50 + 20*float64(index+1)
+	}
+	// fmt.Println("CURRENT OFFSET", offsetY)
 
 	// beginning of rectangle is startPoint
-	// startRect := 0.0
-	startRect := (float64(startPoint) / float64(scale)) * win.Bounds().Max.X
-	length := (float64(endPoint-startPoint)/float64(scale))*win.Bounds().Max.X - 1
+	startRectX := (float64(startPoint)/float64(scale))*win.Bounds().Max.X + 20
+	length := (float64(endPoint-startPoint)/float64(scale))*win.Bounds().Max.X - 50
+	// limit the bounds
+	if startRectX > win.Bounds().Max.X-50 {
+		startRectX = win.Bounds().Max.X - 50
+	}
+
+	if length < 20 {
+		length = 20
+	}
 
 	// Draw a rectangle
-	eventChannelsS = append(eventChannelsS, pixel.V(startRect, win.Bounds().Max.Y-float64(index)*offsetY-20))
-	eventChannelsF = append(eventChannelsF, pixel.V(startRect+length, win.Bounds().Max.Y-float64(index)*offsetY-40))
+	eventChannelsS = append(eventChannelsS, pixel.V(startRectX, offsetY))
+	eventChannelsF = append(eventChannelsF, pixel.V(startRectX+length, offsetY+10))
 
 	// draw name of event
-	namesPos := pixel.V(startRect, win.Bounds().Max.Y-float64(index)*offsetY-40)
+	namesPos := pixel.V(startRectX, offsetY)
 	names = append(names, namesPos)
 
-	// Create a basic font
-	textPos := pixel.V(startRect, win.Bounds().Max.Y-float64(index)*offsetY-40)
+	// text pos
+	textPos := pixel.V(startRectX, offsetY)
 	eventsText[message] = textPos
 }
 
@@ -58,10 +71,14 @@ func animateAll(win *pixelgl.Window) {
 
 	win.Update()
 
-	for !win.Closed() {
+	for !win.Pressed(pixelgl.MouseButtonLeft) {
+		batchRect := pixel.NewBatch(&pixel.TrianglesData{}, nil)
+		batchRect.Clear()
 		win.Clear(colornames.Aliceblue)
-		// Draw the rectangle
+
+		// draw channels
 		i := 0
+
 		for key := range events {
 
 			if key == "Main" {
@@ -70,32 +87,45 @@ func animateAll(win *pixelgl.Window) {
 				eventsText[key] = xPos
 			}
 
-			fmt.Println(eventChannelsS[i].X, eventChannelsF[i].X)
+			imd := imdraw.New(nil)
+			imd.Color = colornames.Cadetblue
+			imd.Push(eventChannelsS[i], eventChannelsF[i])
+			imd.Rectangle(0)
+			imd.Draw(batchRect)
 
 			if eventsText["Main"].X > eventChannelsS[i].X {
 				imd := imdraw.New(nil)
 				lineUp(imd, win, eventChannelsS[i], i)
-				imd.Color = colornames.Cadetblue
-				imd.Push(eventChannelsS[i], eventChannelsF[i])
-				imd.Rectangle(0)
-				imd.Draw(win)
 			}
 
 			if eventsText["Main"].X > eventChannelsF[i].X {
 				imd := imdraw.New(nil)
 				lineDown(imd, win, eventChannelsF[i])
-				imd.Color = colornames.Cadetblue
-				imd.Push(eventChannelsS[i], eventChannelsF[i])
-				imd.Rectangle(0)
-				imd.Draw(win)
+				// imd.Color = colornames.Cadetblue
+				// imd.Push(eventChannelsS[i], eventChannelsF[i])
+				// imd.Rectangle(0)
+				// imd.Draw(batchRect)
 			}
+			i += 1
+		}
+		batchRect.Draw(win)
 
+		// draw text
+		i = 0
+		for key := range events {
 			basicTxt := text.New(eventsText[key], basicAtlas)
+			if key == "Main" {
+				nameText := text.New(pixel.V(10, 50), basicAtlas)
+				nameText.Color = colornames.Black
+				fmt.Fprintln(nameText, key)
+				nameText.Draw(win, pixel.IM)
+			}
 			basicTxt.Color = colornames.Black
 			fmt.Fprintln(basicTxt, key)
 			basicTxt.Draw(win, pixel.IM)
 			i += 1
 		}
+
 		// Draw the text at the updated position
 		win.Update()
 	}
@@ -142,137 +172,6 @@ func lineUp(imd *imdraw.IMDraw, win *pixelgl.Window, pos pixel.Vec, index int) {
 	imd.Push(pixel.V(pos.X, eventChannelsS[len(eventChannelsS)-1].Y), pixel.V(pos.X, eventChannelsF[index].Y))
 	imd.Line(2)
 	imd.Draw(win)
-}
-
-// func worker(done chan bool, win *pixelgl.Window) {
-// 	startTime := time.Now()
-// 	fmt.Print("working...")
-// 	time.Sleep(time.Second)
-// 	fmt.Println("done")
-// 	done <- true
-// 	endTime := time.Now()
-// 	events["Program 1"+fmt.Sprint(getGID)] = [2]time.Time{startTime, endTime}
-// }
-
-// func runChannel(win *pixelgl.Window) {
-// 	startTime := time.Now()
-// 	done := make(chan bool, 1)
-// 	go worker(done, win)
-// 	<-done
-// 	receiveTime := time.Now()
-// 	events["Main"+fmt.Sprint(getGID)] = [2]time.Time{startTime, receiveTime}
-// 	animateChannel(win)
-// }
-
-func runChannel(win *pixelgl.Window) {
-	startTime := time.Now()
-	messages := make(chan string)
-
-	go func() {
-		funcTime := time.Now()
-		messages <- "ping"
-		funcEndTime := time.Now()
-		events["Program 1"] = [2]time.Time{funcTime, funcEndTime}
-	}()
-
-	msg := <-messages
-	fmt.Println(msg)
-
-	go func() {
-		funcTime := time.Now()
-		messages <- "ping"
-		funcEndTime := time.Now()
-		events["Program 2"] = [2]time.Time{funcTime, funcEndTime}
-	}()
-	msg = <-messages
-	fmt.Println(msg)
-
-	go func() {
-		funcTime := time.Now()
-		messages <- "ping"
-		funcEndTime := time.Now()
-		events["Program 3"] = [2]time.Time{funcTime, funcEndTime}
-	}()
-	msg = <-messages
-	receiveTime := time.Now()
-	fmt.Println(msg)
-	events["Main"] = [2]time.Time{startTime, receiveTime}
-
-	fmt.Println(events)
-
-	animateChannel(win)
-}
-
-// func calcSquares(number int, squareop chan int) {
-// 	funcTime := time.Now()
-// 	sum := 0
-// 	for number != 0 {
-// 		digit := number % 10
-// 		sum += digit * digit
-// 		number /= 10
-// 	}
-// 	time.Sleep(5 * time.Second)
-// 	squareop <- sum
-// 	funcEndTime := time.Now()
-// 	mutex.Lock()
-// 	defer mutex.Unlock()
-// 	events["calcSquares"+fmt.Sprint(getGID())] = [2]time.Time{funcTime, funcEndTime}
-// }
-
-// func calcCubes(number int, cubeop chan int) {
-// 	funcTime := time.Now()
-// 	time.Sleep(2 * time.Second)
-// 	sum := 0
-// 	for number != 0 {
-// 		digit := number % 10
-// 		sum += digit * digit * digit
-// 		number /= 10
-// 	}
-// 	cubeop <- sum
-// 	funcEndTime := time.Now()
-// 	mutex.Lock()
-// 	defer mutex.Unlock()
-// 	events["calcCubes"+fmt.Sprint(getGID())] = [2]time.Time{funcTime, funcEndTime}
-// }
-
-// func runChannel(win *pixelgl.Window) {
-// 	startTime := time.Now()
-
-// 	number := 589
-// 	sqrch := make(chan int)
-// 	cubech := make(chan int)
-// 	go calcSquares(number, sqrch)
-// 	go calcCubes(number, cubech)
-// 	squares, cubes := <-sqrch, <-cubech
-// 	fmt.Println("Final output", squares+cubes)
-
-// 	receiveTime := time.Now()
-
-// 	events["Main"+fmt.Sprint(getGID())] = [2]time.Time{startTime, receiveTime}
-// 	animateChannel(win)
-// }
-
-func run() {
-	cfg := pixelgl.WindowConfig{
-		Title:  "Pixel Rocks!",
-		Bounds: pixel.R(0, 0, 1024, 768),
-		VSync:  true,
-	}
-
-	win, err := pixelgl.NewWindow(cfg)
-	if err != nil {
-		panic(err)
-	}
-	win.Clear((colornames.White))
-
-	// for !win.Closed() {
-	// 	win.Update()
-	// }
-	runChannel(win)
-}
-
-func main() {
-	pixelgl.Run(run)
 }
 
 func getGID() uint64 {

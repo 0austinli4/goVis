@@ -81,5 +81,5 @@ func runConstantAnimation() {
 }
 
 func main() {
-	pixelgl.Run(runOnClick)
+	pixelgl.Run(runConstantAnimation)
 }
