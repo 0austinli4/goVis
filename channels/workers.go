@@ -6,9 +6,7 @@ import (
 	"sync" // to import sync later on
 	"time"
 
-	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
-	"golang.org/x/image/colornames"
 )
 
 var GFG = 0
@@ -100,22 +98,22 @@ func runWorkersNoRace(win *pixelgl.Window) {
 	animateChannel(win)
 }
 
-func run() {
-	cfg := pixelgl.WindowConfig{
-		Title:  "Pixel Rocks!",
-		Bounds: pixel.R(0, 0, 1024, 768),
-		VSync:  true,
-	}
+// func run() {
+// 	cfg := pixelgl.WindowConfig{
+// 		Title:  "Pixel Rocks!",
+// 		Bounds: pixel.R(0, 0, 1024, 768),
+// 		VSync:  true,
+// 	}
 
-	win, err := pixelgl.NewWindow(cfg)
-	if err != nil {
-		panic(err)
-	}
-	win.Clear((colornames.White))
-	runWorkersNoRace(win)
-	runWorkersRace(win)
-}
+// 	win, err := pixelgl.NewWindow(cfg)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	win.Clear((colornames.White))
+// 	runWorkersNoRace(win)
+// 	runWorkersRace(win)
+// }
 
-func main() {
-	pixelgl.Run(run)
-}
+// func main() {
+// 	pixelgl.Run(run)
+// }

@@ -6,6 +6,10 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/gopxl/pixel"
+	"github.com/gopxl/pixel/pixelgl"
+	"golang.org/x/image/colornames"
 )
 
 type CustomMutex struct {
@@ -68,7 +72,8 @@ func (p *Philosopher) algoLeft(table []sync.Mutex) {
 // always pick up left fork and then right fork
 // can result in deadlock when everyone picks up their left fork
 func (p *Philosopher) djikstra(table []CustomMutex) {
-	for {
+	for i := 0; i < 5; i += 1 {
+		funcTime := time.Now()
 		p.Think()
 		table[p.left].Lock()
 		fmt.Printf("%s picks up fork %d.\n", p.name, p.left)
@@ -82,16 +87,19 @@ func (p *Philosopher) djikstra(table []CustomMutex) {
 			fmt.Printf("%s puts down fork %d.\n", p.name, p.right)
 			table[p.left].Unlock()
 			fmt.Printf("%s puts down fork %d.\n", p.name, p.left)
+			funcEndTime := time.Now()
+			events["Person"+fmt.Sprintln(p.name)+fmt.Sprintln(p.count)+fmt.Sprintln(getGID())] = [2]time.Time{funcTime, funcEndTime}
 		} else {
 			table[p.left].Unlock()
 		}
 	}
 }
 
-func main() {
+func runPhilosopher(win *pixelgl.Window) {
+	// var wg sync.WaitGroup
 
 	// create a wait group so main won't end
-
+	startTime := time.Now()
 	philosophers := []*Philosopher{
 		{"Michelle", 0, 0, 1},
 		{"Bill", 0, 1, 2},
@@ -101,15 +109,41 @@ func main() {
 	}
 
 	table := make([]CustomMutex, len(philosophers))
-
-	for {
+	// wg.Add(25)
+	for i := 0; i < 5; i += 1 {
 		for _, philosopher := range philosophers {
 			go func(p *Philosopher) {
-				// p.algoLeft(table)
 				p.djikstra(table)
+				// defer wg.Done()
 			}(philosopher)
 		}
-
 	}
 
+	// wg.Wait()
+	time.Sleep(10 * time.Second)
+	receiveTime := time.Now()
+	events["Main"] = [2]time.Time{startTime, receiveTime}
+	fmt.Println("lenght of events", len(events))
+
+	animateChannel(win)
+}
+
+func run() {
+	cfg := pixelgl.WindowConfig{
+		Title:  "Pixel Rocks!",
+		Bounds: pixel.R(0, 0, 1024, 768),
+		VSync:  true,
+	}
+
+	win, err := pixelgl.NewWindow(cfg)
+	if err != nil {
+		panic(err)
+	}
+	win.Clear((colornames.White))
+	runPhilosopher(win)
+
+}
+
+func main() {
+	pixelgl.Run(run)
 }
