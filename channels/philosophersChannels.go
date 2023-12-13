@@ -7,9 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
-	"golang.org/x/image/colornames"
 )
 
 type CustomMutex struct {
@@ -128,22 +126,22 @@ func runPhilosopher(win *pixelgl.Window) {
 	animateChannel(win)
 }
 
-func run() {
-	cfg := pixelgl.WindowConfig{
-		Title:  "Pixel Rocks!",
-		Bounds: pixel.R(0, 0, 1024, 768),
-		VSync:  true,
-	}
+// func run() {
+// 	cfg := pixelgl.WindowConfig{
+// 		Title:  "Pixel Rocks!",
+// 		Bounds: pixel.R(0, 0, 1024, 768),
+// 		VSync:  true,
+// 	}
 
-	win, err := pixelgl.NewWindow(cfg)
-	if err != nil {
-		panic(err)
-	}
-	win.Clear((colornames.White))
-	runPhilosopher(win)
+// 	win, err := pixelgl.NewWindow(cfg)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	win.Clear((colornames.White))
+// 	runPhilosopher(win)
 
-}
+// }
 
-func main() {
-	pixelgl.Run(run)
-}
+// func main() {
+// 	pixelgl.Run(run)
+// }
