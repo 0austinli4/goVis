@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	_ "image/png"
+	"math"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gopxl/pixel"
@@ -17,21 +19,20 @@ import (
 )
 
 var events map[string][2]time.Time = make(map[string][2]time.Time)
+var eventsOrder []string = make([]string, 0)
 
 var eventChannelsS []pixel.Vec = make([]pixel.Vec, 0)
 var eventChannelsF []pixel.Vec = make([]pixel.Vec, 0)
 
+var eventLocksS []pixel.Vec = make([]pixel.Vec, 0)
+var eventLocksF []pixel.Vec = make([]pixel.Vec, 0)
+
 var eventsText map[string]pixel.Vec = make(map[string]pixel.Vec, 0)
 var names []pixel.Vec = make([]pixel.Vec, 0)
 
-// var (
-// 	// Create a global mutex
-// 	mutex sync.Mutex
-// )
+var namesOfRoutines []string = make([]string, 0)
 
 func channel(win *pixelgl.Window, message string, rows int, index int, startPoint time.Duration, endPoint time.Duration, scale time.Duration) {
-	// length of the rectangle is determined by endPoint  - startPoint
-
 	offsetY := (win.Bounds().Max.Y / float64(rows)) * float64(index)
 	if message == "Main" {
 		offsetY = 50
@@ -40,6 +41,9 @@ func channel(win *pixelgl.Window, message string, rows int, index int, startPoin
 		offsetY = 50 + 20*float64(index+1)
 	}
 	// fmt.Println("CURRENT OFFSET", offsetY)
+	//else if strings.Contains(message, "lock") {
+	// offsetY = 50 + 20*float64(index) + 5
+	// }
 
 	// beginning of rectangle is startPoint
 	startRectX := (float64(startPoint)/float64(scale))*win.Bounds().Max.X + 20
@@ -49,21 +53,37 @@ func channel(win *pixelgl.Window, message string, rows int, index int, startPoin
 		startRectX = win.Bounds().Max.X - 50
 	}
 
-	if length < 20 {
-		length = 20
+	if length < 10 && strings.Contains(message, "lock") {
+		return
+	} else if length < 10 {
+		length = 10
 	}
 
 	// Draw a rectangle
-	eventChannelsS = append(eventChannelsS, pixel.V(startRectX, offsetY))
-	eventChannelsF = append(eventChannelsF, pixel.V(startRectX+length, offsetY+10))
+	if strings.Contains(message, "lock") {
+		eventLocksS = append(eventLocksS, pixel.V(startRectX, offsetY))
+		eventLocksF = append(eventLocksF, pixel.V(startRectX+length, offsetY+10))
+	} else {
+		eventChannelsS = append(eventChannelsS, pixel.V(startRectX, offsetY))
+		eventChannelsF = append(eventChannelsF, pixel.V(startRectX+length, offsetY+10))
+	}
 
 	// draw name of event
 	namesPos := pixel.V(startRectX, offsetY)
 	names = append(names, namesPos)
 
+	// list of names of goid
+	namesOfRoutines = append(namesOfRoutines, message)
+
 	// text pos
 	textPos := pixel.V(startRectX, offsetY)
 	eventsText[message] = textPos
+
+	// draw arrows between locks
+	// if strings.Contains(message, "lock") {
+
+	// }
+
 }
 
 func animateAll(win *pixelgl.Window) {
@@ -77,9 +97,11 @@ func animateAll(win *pixelgl.Window) {
 		win.Clear(colornames.Aliceblue)
 
 		// draw channels
-		i := 0
+		lockCounter := 0
+		channelCounter := 0
 
-		for key := range events {
+		for i := range namesOfRoutines {
+			key := namesOfRoutines[i]
 
 			if key == "Main" {
 				xPos := eventsText[key]
@@ -87,32 +109,57 @@ func animateAll(win *pixelgl.Window) {
 				eventsText[key] = xPos
 			}
 
-			imd := imdraw.New(nil)
-			imd.Color = colornames.Cadetblue
-			imd.Push(eventChannelsS[i], eventChannelsF[i])
-			imd.Rectangle(0)
-			imd.Draw(batchRect)
+			if strings.Contains(key, "lock") {
+				if i > 0 && eventsText["Main"].X > eventLocksS[lockCounter].X {
+					imd := imdraw.New(nil)
+					imd.Color = colornames.Cadetblue
+					imd.Push(eventLocksS[lockCounter], eventLocksF[lockCounter])
+					imd.Rectangle(0)
+					imd.Draw(batchRect)
 
-			if eventsText["Main"].X > eventChannelsS[i].X {
+					stop := pixel.V(eventLocksF[lockCounter].X, eventChannelsS[channelCounter].Y-20)
+					start := pixel.V(eventLocksF[lockCounter].X, eventChannelsS[channelCounter-1].Y)
+					arrow(imd, win, start, stop)
+
+					textPos := pixel.V(eventLocksF[lockCounter].X+20, eventLocksF[lockCounter].Y)
+					nameText := text.New(textPos, basicAtlas)
+					nameText.Color = colornames.Black
+					fmt.Fprintln(nameText, "Giving lock")
+					nameText.Draw(win, pixel.IM)
+				}
+				lockCounter += 1
+			} else {
 				imd := imdraw.New(nil)
-				lineUp(imd, win, eventChannelsS[i], i)
+				imd.Color = colornames.Cadetblue
+				imd.Push(eventChannelsS[channelCounter], eventChannelsF[channelCounter])
+				imd.Rectangle(0)
+				imd.Draw(batchRect)
+				channelCounter += 1
 			}
 
-			if eventsText["Main"].X > eventChannelsF[i].X {
-				imd := imdraw.New(nil)
-				lineDown(imd, win, eventChannelsF[i])
-				// imd.Color = colornames.Cadetblue
-				// imd.Push(eventChannelsS[i], eventChannelsF[i])
-				// imd.Rectangle(0)
-				// imd.Draw(batchRect)
-			}
-			i += 1
+			// if eventsText["Main"].X > eventChannelsS[i].X {
+			// 	imd := imdraw.New(nil)
+			// 	lineUp(imd, win, eventChannelsS[i], i)
+			// }
+
+			// if eventsText["Main"].X > eventChannelsF[i].X {
+			// 	imd := imdraw.New(nil)
+			// 	lineDown(imd, win, eventChannelsF[i])
+			// }
 		}
 		batchRect.Draw(win)
 
 		// draw text
-		i = 0
-		for key := range events {
+		for i := range namesOfRoutines {
+			key := namesOfRoutines[i]
+
+			// if strings.Contains(key, "lock") {
+			// 	continue
+			// }
+			// nameText := text.New(eventLocksS[lockCounter], basicAtlas)
+			// nameText.Color = colornames.Black
+			// fmt.Fprintln(nameText, "Giving lock")
+			// nameText.Draw(win, pixel.IM)
 			basicTxt := text.New(eventsText[key], basicAtlas)
 			if key == "Main" {
 				nameText := text.New(pixel.V(10, 50), basicAtlas)
@@ -120,6 +167,9 @@ func animateAll(win *pixelgl.Window) {
 				fmt.Fprintln(nameText, key)
 				nameText.Draw(win, pixel.IM)
 			}
+			// if strings.Contains(key, "lock") {
+			// 	fmt.Fprintln(basicTxt, "giving lock")
+			// }
 			basicTxt.Color = colornames.Black
 			fmt.Fprintln(basicTxt, key)
 			basicTxt.Draw(win, pixel.IM)
@@ -137,10 +187,11 @@ func animateChannel(win *pixelgl.Window) {
 
 	scale := universalEndTime.Sub(universalStartTime)
 	rows := len(events)
-
+	fmt.Println("LENGHT OF EVENTS", rows)
 	i := 0
 
-	for key := range events {
+	for i := range eventsOrder {
+		key := eventsOrder[i]
 		if key == "Main" {
 			continue
 		}
@@ -158,6 +209,34 @@ func animateChannel(win *pixelgl.Window) {
 	channel(win, "Main", rows, i, startPoint, endPoint, scale)
 
 	animateAll(win)
+}
+
+func arrow(imd *imdraw.IMDraw, win *pixelgl.Window, p2 pixel.Vec, p1 pixel.Vec) {
+	fmt.Println("calling this")
+	// Calculate arrow direction and length
+	dir := p2.Sub(p1)
+
+	// Draw a line from p1 to p2
+	imd.Color = colornames.Black
+	imd.Push(p1, p2)
+	imd.Line(3)
+
+	// Calculate the arrowhead points
+	angle := math.Pi / 6 // Angle of the arrowhead
+	arrowLen := 8.0      // Length of the arrowhead
+
+	arrowDir := dir.Unit()
+	arrowP1 := p1.Sub(arrowDir.Scaled(arrowLen))                                         // Tip of the arrow
+	arrowP2 := p1.Sub(arrowDir.Rotated(math.Pi / 2).Scaled(arrowLen * math.Tan(angle)))  // Left side of the arrowhead
+	arrowP3 := p1.Sub(arrowDir.Rotated(-math.Pi / 2).Scaled(arrowLen * math.Tan(angle))) // Right side of the arrowhead
+
+	// Draw the arrowhead by connecting the three points
+	imd.Push(arrowP1, arrowP2)
+	imd.Line(3)
+	imd.Push(arrowP1, arrowP3)
+	imd.Line(3)
+
+	imd.Draw(win)
 }
 
 func lineDown(imd *imdraw.IMDraw, win *pixelgl.Window, pos pixel.Vec) {

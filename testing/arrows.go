@@ -3,9 +3,9 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"sync" // to import sync later on
 	"time"
-	"math/rand"
 
 	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
@@ -13,33 +13,51 @@ import (
 )
 
 var wg sync.WaitGroup
+var globalLock sync.Mutex
 
 type Bank struct {
-	owner *User
-	mu sync.Mutex
+	owner   *User
+	mu      sync.Mutex
 	balance int
 }
 
 type User struct {
-	name string
+	name    string
 	balance int
 }
 
 func (user *User) deposit(bank *Bank, amount int) {
+	funcTime := time.Now()
 	defer wg.Done()
-	bank.owner = user
-	bank.mu.Lock()
 
+	currentUser := bank.owner
+	fmt.Println(currentUser)
+
+	bank.mu.Lock()
+	acquiredTime := time.Now()
+	bank.owner = user
 	user.balance -= amount
 	bank.balance += amount
 
 	// build-in delay
 	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
-
 	bank.owner = nil
-
-	fmt.Println(user.name, "deposited $20. balance:", user.balance)
+	// fmt.Println(user.name, "deposited $20. balance:", user.balance)
 	bank.mu.Unlock()
+	funcEndTime := time.Now()
+
+	globalLock.Lock()
+	if currentUser != nil && currentUser.name != user.name {
+		key := user.name + fmt.Sprintln(getGID()) + " waiting for lock from \n" + currentUser.name
+		events[key] = [2]time.Time{funcTime, acquiredTime}
+		eventsOrder = append(eventsOrder, key)
+	}
+	key := fmt.Sprintln(user.name) + " attempting deposit, goid: " + fmt.Sprintln(getGID())
+	events[key] = [2]time.Time{funcTime, funcEndTime}
+	eventsOrder = append(eventsOrder, key)
+
+	globalLock.Unlock()
+
 }
 
 func (user *User) withdraw(bank *Bank, amount int) {
@@ -57,7 +75,6 @@ func (user *User) withdraw(bank *Bank, amount int) {
 	bank.mu.Unlock()
 }
 
-
 func runSim(win *pixelgl.Window) {
 	startTime := time.Now()
 
@@ -72,7 +89,7 @@ func runSim(win *pixelgl.Window) {
 
 	//table := make([]CustomMutex, len(philosophers))
 	// wg.Add(25)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 2; i++ {
 		for _, user := range users {
 			wg.Add(1)
 			go user.deposit(&bank, 20)
@@ -80,12 +97,13 @@ func runSim(win *pixelgl.Window) {
 		}
 	}
 
-	// wg.Wait()
+	wg.Wait()
 	receiveTime := time.Now()
 
 	events["Main"] = [2]time.Time{startTime, receiveTime}
-	fmt.Println("length of events", len(events))
+	eventsOrder = append(eventsOrder, "Main")
 
+	fmt.Println("length of events", len(events))
 	animateChannel(win)
 }
 
@@ -100,7 +118,14 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("hello")
 	win.Clear((colornames.White))
+	// imd := imdraw.New(nil)
+	// for !win.Closed() {
+	// 	arrow(imd, win, pixel.V(20, 20), pixel.V(200, 200))
+	// 	win.Update()
+	// }
+
 	runSim(win)
 
 }
