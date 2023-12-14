@@ -89,7 +89,7 @@ func runSim(win *pixelgl.Window) {
 
 	//table := make([]CustomMutex, len(philosophers))
 	// wg.Add(25)
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		for _, user := range users {
 			wg.Add(1)
 			go user.deposit(&bank, 20)

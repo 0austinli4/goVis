@@ -39,6 +39,8 @@ func channel(win *pixelgl.Window, message string, rows int, index int, startPoin
 	}
 	if offsetY < 50 {
 		offsetY = 50 + 20*float64(index+1)
+	} else if strings.Contains(message, "lock") {
+		offsetY = offsetY - 30
 	}
 	// fmt.Println("CURRENT OFFSET", offsetY)
 	//else if strings.Contains(message, "lock") {
@@ -110,7 +112,7 @@ func animateAll(win *pixelgl.Window) {
 			}
 
 			if strings.Contains(key, "lock") {
-				if i > 0 && eventsText["Main"].X > eventLocksS[lockCounter].X {
+				if i > 0 && eventsText["Main"].X > eventLocksF[lockCounter].X {
 					imd := imdraw.New(nil)
 					imd.Color = colornames.Cadetblue
 					imd.Push(eventLocksS[lockCounter], eventLocksF[lockCounter])
