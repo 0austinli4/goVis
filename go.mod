@@ -3,8 +3,6 @@ module myApp
 go 1.21.1
 
 require (
-	fyne.io/fyne/v2 v2.4.2 // indirect
-	fyne.io/systray v1.10.1-0.20231115130155-104f5ef7839e // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/faiface/glhf v0.0.0-20211013000516-57b20770c369 // indirect
@@ -12,9 +10,6 @@ require (
 	github.com/faiface/pixel v0.10.0 // indirect
 	github.com/fredbi/uri v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/fyne-io/gl-js v0.0.0-20220119005834-d2da28d9ccfe // indirect
-	github.com/fyne-io/glfw-js v0.0.0-20220120001248-ee7290d23504 // indirect
-	github.com/fyne-io/image v0.0.0-20220602074514-4956b0afb3d2 // indirect
 	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b // indirect
 	github.com/go-gl/mathgl v1.1.0 // indirect
