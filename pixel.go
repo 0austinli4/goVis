@@ -58,11 +58,14 @@ func loadPicture(path string) (pixel.Picture, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer file.Close()
+
 	img, _, err := image.Decode(file)
 	if err != nil {
 		return nil, err
 	}
+
 	return pixel.PictureDataFromImage(img), nil
 }
 
@@ -73,9 +76,11 @@ func initializePhilosophers(win *pixelgl.Window) {
 	if err != nil {
 		panic(err)
 	}
+
 	// create sprite (object with picture)
 	sprite := pixel.NewSprite(pic, pic.Bounds())
 	spritePos := pixel.V(0, 0)
+
 	// intiialize text object for animations
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 
@@ -110,7 +115,9 @@ func initializePhilosophers(win *pixelgl.Window) {
 			centerX+radius*math.Cos(angle),
 			centerY+radius*math.Sin(angle),
 		)
+
 		mat := pixel.IM
+
 		// for sizing
 		mat = mat.ScaledXY(spritePos, pixel.V(0.15, 0.15))
 
@@ -123,17 +130,20 @@ func initializePhilosophers(win *pixelgl.Window) {
 			centerX-80+radiusText*math.Cos(angle),
 			centerY+radiusText*math.Sin(angle),
 		)
+
 		philosophers[i].textPos = textPos
 		basicTxt := text.New(textPos, basicAtlas)
 		basicTxt.Color = colornames.Black
 		fmt.Fprintln(basicTxt, philosophers[i].name)
 		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 1.5))
 	}
+
 	// text position for CLICK TO START
 	textPos := pixel.V(
 		win.Bounds().Max.X/2-200,
 		win.Bounds().Max.Y-float64(100),
 	)
+
 	basicTxt := text.New(textPos, basicAtlas)
 	basicTxt.Color = colornames.Black
 	fmt.Fprintln(basicTxt, "CLICK TO START")
@@ -157,6 +167,7 @@ func initializeForks(win *pixelgl.Window) {
 		{"", mat, pixel.V(0, 0)},
 		{"", mat, pixel.V(0, 0)},
 	}
+
 	// same logic as philosophers
 	centerX := (win.Bounds().Center()).X
 	centerY := (win.Bounds().Center()).Y
@@ -172,12 +183,15 @@ func initializeForks(win *pixelgl.Window) {
 			centerX+radius*math.Cos(angle),
 			centerY+radius*math.Sin(angle),
 		)
+
 		mat := pixel.IM
 		mat = mat.ScaledXY(spritePos, pixel.V(0.15, 0.15))
+
 		spritePos = pixel.V(
 			centerX+radius*math.Cos(angle)-50,
 			centerY+radius*math.Sin(angle)-50,
 		)
+
 		forks[i].pos = spritePos
 		forks[i].mat = mat
 		sprite.Draw(win, mat)
@@ -214,6 +228,7 @@ func drawNewFrame(win *pixelgl.Window) {
 	// draw visual for forks, based on owner
 	for i := 0; i < len(forks); i++ {
 		mat := pixel.IM
+
 		if forks[i].owner == "" {
 			mat = forks[i].mat
 			spriteFork.Draw(batchFork, mat)
@@ -237,6 +252,7 @@ func drawNewFrame(win *pixelgl.Window) {
 	for i := 0; i < len(philosophers); i++ {
 		spritePos := philosophers[i].spritePos
 		mat := pixel.IM
+		
 		if philosophers[i].eating {
 			mat = mat.ScaledXY(spritePos, pixel.V(0.18, 0.18))
 			spriteEat.Draw(batchEating, mat)
@@ -244,6 +260,7 @@ func drawNewFrame(win *pixelgl.Window) {
 			mat = mat.ScaledXY(spritePos, pixel.V(0.15, 0.15))
 			spriteStand.Draw(batchStand, mat)
 		}
+
 		textPos := philosophers[i].textPos
 		basicTxt := text.New(textPos, basicAtlas)
 		basicTxt.Color = colornames.Black
@@ -258,11 +275,14 @@ func drawNewFrame(win *pixelgl.Window) {
 	// draw latest 8 actions
 	basicTxt := text.New(pixel.V(20, 80), basicAtlas)
 	basicTxt.Color = colornames.Black
+	
 	if len(textSeg) > 8 {
 		// Remove the first element if the queue length exceeds 10
 		textSeg = textSeg[len(textSeg)-8:]
 	}
+
 	fmt.Fprintln(basicTxt, "Order of Actions")
+	
 	for _, segment := range textSeg {
 		fmt.Fprintln(basicTxt, segment)
 	}

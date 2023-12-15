@@ -40,10 +40,10 @@ func (user *User) deposit(bank *Bank, amount int) {
 		user.balance -= amount
 		bank.balance += amount
 
-		fmt.Println(user.name, "deposited $" + fmt.Sprint(amount))
+		fmt.Println(user.name, "deposited $"+fmt.Sprint(amount))
 	} else {
-		fmt.Println(user.name, "does not have enough to deposit $" +
-						fmt.Sprint(amount))
+		fmt.Println(user.name, "does not have enough to deposit $"+
+			fmt.Sprint(amount))
 	}
 
 	// built-in delay
@@ -53,15 +53,14 @@ func (user *User) deposit(bank *Bank, amount int) {
 	bank.mu.Unlock()
 	funcEndTime := time.Now()
 
-
 	globalLock.Lock()
 	if currentUser != nil && currentUser.name != user.name {
-		key := user.name + " " + fmt.Sprintln(getGID()) + " waiting for lock from \n" + currentUser.name
+		key := user.name + " " + fmt.Sprint(getGID()) + " waiting for " + currentUser.name
 		events[key] = [2]time.Time{funcTime, acquiredTime}
 		eventsOrder = append(eventsOrder, key)
 	}
 
-	key := fmt.Sprintln(user.name) + " attempting deposit, goid: " + fmt.Sprintln(getGID())
+	key := fmt.Sprint(user.name) + ", deposit, goid: " + fmt.Sprintln(getGID())
 	events[key] = [2]time.Time{funcTime, funcEndTime}
 	eventsOrder = append(eventsOrder, key)
 
@@ -84,12 +83,11 @@ func (user *User) withdraw(bank *Bank, amount int) {
 		user.balance += amount
 		bank.balance -= amount
 
-		fmt.Println(user.name, "withdrew $" + fmt.Sprint(amount))
+		fmt.Println(user.name, "withdrew $"+fmt.Sprint(amount))
 	} else {
 		fmt.Println("bank does not have enough to withdraw $" +
-						fmt.Sprint(amount))
+			fmt.Sprint(amount))
 	}
-
 
 	// built-in delay
 	time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
@@ -102,12 +100,12 @@ func (user *User) withdraw(bank *Bank, amount int) {
 	globalLock.Lock()
 
 	if currentUser != nil && currentUser.name != user.name {
-		key := user.name + " " + fmt.Sprintln(getGID()) + " waiting for lock from \n" + currentUser.name
+		key := user.name + " " + fmt.Sprint(getGID()) + ", waiting for " + currentUser.name
 		events[key] = [2]time.Time{funcTime, acquiredTime}
 		eventsOrder = append(eventsOrder, key)
 	}
 
-	key := fmt.Sprintln(user.name) + " attempting deposit, goid: " + fmt.Sprintln(getGID())
+	key := fmt.Sprint(user.name) + ", withdraw, goid: " + fmt.Sprintln(getGID())
 	events[key] = [2]time.Time{funcTime, funcEndTime}
 	eventsOrder = append(eventsOrder, key)
 
@@ -120,14 +118,13 @@ func runSim() {
 	users := []*User{
 		{"Brandon", 40},
 		{"Austin", 40},
-		{"Sol", 40},
 	}
 
 	bank := Bank{
 		balance: 0,
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		for _, user := range users {
 			wg.Add(1)
 			go user.deposit(&bank, 20)
@@ -135,7 +132,7 @@ func runSim() {
 		}
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		for _, user := range users {
 			wg.Add(1)
 			go user.withdraw(&bank, 20)

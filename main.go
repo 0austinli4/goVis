@@ -9,6 +9,8 @@ import (
 	"golang.org/x/image/colornames"
 )
 
+// optional function - you can use either runOnClick() or
+//	runConstantAnimation()
 func runOnClick() {
 	var wg sync.WaitGroup
 	wg.Add(1)
