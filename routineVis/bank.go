@@ -131,7 +131,7 @@ func runSim() {
 		}
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		for _, user := range users {
 			wg.Add(1)
 			go user.withdraw(&bank, 20)
