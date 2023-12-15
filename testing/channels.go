@@ -42,11 +42,7 @@ func channel(win *pixelgl.Window, message string, rows int, index int, startPoin
 	} else if strings.Contains(message, "lock") {
 		offsetY = offsetY - 30
 	}
-	// fmt.Println("CURRENT OFFSET", offsetY)
-	//else if strings.Contains(message, "lock") {
-	// offsetY = 50 + 20*float64(index) + 5
-	// }
-
+	
 	// beginning of rectangle is startPoint
 	startRectX := (float64(startPoint)/float64(scale))*win.Bounds().Max.X + 20
 	length := (float64(endPoint-startPoint)/float64(scale))*win.Bounds().Max.X - 50

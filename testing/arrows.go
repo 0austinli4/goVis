@@ -40,12 +40,13 @@ func (user *User) deposit(bank *Bank, amount int) {
 		user.balance -= amount
 		bank.balance += amount
 
-		fmt.Println(user.name, "deposited", amount, "balance", user.balance)
+		fmt.Println(user.name, "deposited $" + fmt.Sprint(amount))
 	} else {
-		fmt.Println(user.name, "does not have enough to deposit", amount, "balance", user.balance)
+		fmt.Println(user.name, "does not have enough to deposit $" +
+						fmt.Sprint(amount))
 	}
 
-	// build-in delay
+	// built-in delay
 	time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 	bank.owner = nil
 
@@ -59,6 +60,7 @@ func (user *User) deposit(bank *Bank, amount int) {
 		events[key] = [2]time.Time{funcTime, acquiredTime}
 		eventsOrder = append(eventsOrder, key)
 	}
+
 	key := fmt.Sprintln(user.name) + " attempting deposit, goid: " + fmt.Sprintln(getGID())
 	events[key] = [2]time.Time{funcTime, funcEndTime}
 	eventsOrder = append(eventsOrder, key)
@@ -74,6 +76,7 @@ func (user *User) withdraw(bank *Bank, amount int) {
 	currentUser := bank.owner
 
 	bank.mu.Lock()
+
 	acquiredTime := time.Now()
 	bank.owner = user
 
@@ -81,9 +84,10 @@ func (user *User) withdraw(bank *Bank, amount int) {
 		user.balance += amount
 		bank.balance -= amount
 
-		fmt.Println(user.name, "withdrew", amount, "balance", user.balance)
+		fmt.Println(user.name, "withdrew $" + fmt.Sprint(amount))
 	} else {
-		fmt.Println("bank does not have enough to withdraw", amount, "balance", bank.balance)
+		fmt.Println("bank does not have enough to withdraw $" +
+						fmt.Sprint(amount))
 	}
 
 
@@ -102,7 +106,8 @@ func (user *User) withdraw(bank *Bank, amount int) {
 		events[key] = [2]time.Time{funcTime, acquiredTime}
 		eventsOrder = append(eventsOrder, key)
 	}
-	key := fmt.Sprintln(user.name) + " attempting withdraw, goid: " + fmt.Sprintln(getGID())
+
+	key := fmt.Sprintln(user.name) + " attempting deposit, goid: " + fmt.Sprintln(getGID())
 	events[key] = [2]time.Time{funcTime, funcEndTime}
 	eventsOrder = append(eventsOrder, key)
 
@@ -122,8 +127,6 @@ func runSim() {
 		balance: 0,
 	}
 
-	//table := make([]CustomMutex, len(philosophers))
-	// wg.Add(25)
 	for i := 0; i < 3; i++ {
 		for _, user := range users {
 			wg.Add(1)
@@ -135,10 +138,11 @@ func runSim() {
 	for i := 0; i < 3; i++ {
 		for _, user := range users {
 			wg.Add(1)
-			go user.withdraw(&bank, 10)
+			go user.withdraw(&bank, 20)
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
+
 	wg.Wait()
 	receiveTime := time.Now()
 
@@ -160,11 +164,6 @@ func runSim() {
 
 	win.Clear((colornames.White))
 	animateChannel(win)
-	// imd := imdraw.New(nil)
-	// for !win.Closed() {
-	// 	arrow(imd, win, pixel.V(20, 20), pixel.V(200, 200))
-	// 	win.Update()
-	// }
 }
 
 func main() {
