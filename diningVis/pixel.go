@@ -72,7 +72,7 @@ func loadPicture(path string) (pixel.Picture, error) {
 // initialize philsopohers animation (5 gophers in circle)
 func initializePhilosophers(win *pixelgl.Window) {
 	// load picture
-	pic, err := loadPicture("hiking.png")
+	pic, err := loadPicture("../assets/hiking.png")
 	if err != nil {
 		panic(err)
 	}
@@ -152,7 +152,7 @@ func initializePhilosophers(win *pixelgl.Window) {
 
 // initialize forks
 func initializeForks(win *pixelgl.Window) {
-	pic, err := loadPicture("fork.png")
+	pic, err := loadPicture("../assets/fork.png")
 	if err != nil {
 		panic(err)
 	}
@@ -313,16 +313,13 @@ func updateEat(p *Philosopher) {
 
 // think function: delays by a random time
 func (p *Philosopher) Think(win *pixelgl.Window) {
-	fmt.Println(p.name, "is thinking.")
 	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
-	fmt.Println(p.name, "is done thinking.")
 }
 
 // eat function  -> take random time duration to finish eating
 func (p *Philosopher) Eat(win *pixelgl.Window) {
 	p.count++
 	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
-	fmt.Println(p.name, "is done eating.")
 }
 
 // Dine function : declares algorithm
