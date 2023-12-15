@@ -12,6 +12,7 @@ import (
 func runAnimation() {
 	var wg sync.WaitGroup
 	wg.Add(1)
+	
 	cfg := pixelgl.WindowConfig{
 		Title:  "Philosophers",
 		Bounds: pixel.R(0, 0, 1024, 768),
