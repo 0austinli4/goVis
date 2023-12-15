@@ -164,7 +164,7 @@ func animateChannel(win *pixelgl.Window) {
 
 	scale := universalEndTime.Sub(universalStartTime)
 	rows := len(events)
-	fmt.Println("LENGHT OF EVENTS", rows)
+
 	i := 0
 
 	for i := range eventsOrder {

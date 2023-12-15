@@ -145,8 +145,6 @@ func runSim() {
 	events["Main"] = [2]time.Time{startTime, receiveTime}
 	eventsOrder = append(eventsOrder, "Main")
 
-	fmt.Println("length of events", len(events))
-
 	cfg := pixelgl.WindowConfig{
 		Title:  "Bank",
 		Bounds: pixel.R(0, 0, 1024, 768),
