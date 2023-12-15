@@ -55,12 +55,11 @@ func (user *User) deposit(bank *Bank, amount int) {
 
 	globalLock.Lock()
 	if currentUser != nil && currentUser.name != user.name {
-		key := user.name + " " + fmt.Sprint(getGID()) + " waiting for " + currentUser.name
+		key := "ID: " + fmt.Sprint(getGID()) + " " + user.name + ", waiting for " + currentUser.name
 		events[key] = [2]time.Time{funcTime, acquiredTime}
 		eventsOrder = append(eventsOrder, key)
 	}
-
-	key := fmt.Sprint(user.name) + ", deposit, goid: " + fmt.Sprintln(getGID())
+	key := "ID: " + fmt.Sprint(getGID()) + fmt.Sprint(user.name) + ", deposit"
 	events[key] = [2]time.Time{funcTime, funcEndTime}
 	eventsOrder = append(eventsOrder, key)
 
@@ -100,12 +99,12 @@ func (user *User) withdraw(bank *Bank, amount int) {
 	globalLock.Lock()
 
 	if currentUser != nil && currentUser.name != user.name {
-		key := user.name + " " + fmt.Sprint(getGID()) + ", waiting for " + currentUser.name
+		key := "ID: " + fmt.Sprint(getGID()) + " " + user.name + ", waiting for " + currentUser.name
 		events[key] = [2]time.Time{funcTime, acquiredTime}
 		eventsOrder = append(eventsOrder, key)
 	}
 
-	key := fmt.Sprint(user.name) + ", withdraw, goid: " + fmt.Sprintln(getGID())
+	key := "ID: " + fmt.Sprint(getGID()) + fmt.Sprint(user.name) + ", withdraw"
 	events[key] = [2]time.Time{funcTime, funcEndTime}
 	eventsOrder = append(eventsOrder, key)
 

@@ -33,19 +33,12 @@ var names []pixel.Vec = make([]pixel.Vec, 0)
 var namesOfRoutines []string = make([]string, 0)
 
 func channel(win *pixelgl.Window, message string, rows int, index int, startPoint time.Duration,
-				endPoint time.Duration, scale time.Duration) {
-	offsetY := (win.Bounds().Max.Y / float64(rows)) * float64(index)
+	endPoint time.Duration, scale time.Duration) {
+
+	offsetY := (win.Bounds().Max.Y/float64(rows))*float64(index) + 70
 
 	if message == "Main" {
 		offsetY = 50
-	}
-
-	if offsetY < 50 {
-		offsetY = 50 + 20*float64(index+1)
-	}
-
-	if strings.Contains(message, "waiting") {
-		offsetY = offsetY - 15
 	}
 
 	// beginning of rectangle is startPoint
@@ -119,9 +112,9 @@ func animateAll(win *pixelgl.Window) {
 					start := pixel.V(eventLocksF[lockCounter].X, eventChannelsS[channelCounter-1].Y)
 					arrow(imd, win, start, stop)
 
-					textPos := pixel.V(eventLocksF[lockCounter].X+20, eventLocksF[lockCounter].Y)
+					textPos := pixel.V(eventLocksF[lockCounter].X+20, eventLocksF[lockCounter].Y+20)
 					nameText := text.New(textPos, basicAtlas)
-					nameText.Color = colornames.Black
+					nameText.Color = colornames.Purple
 					fmt.Fprintln(nameText, "Giving lock")
 					nameText.Draw(win, pixel.IM)
 				}

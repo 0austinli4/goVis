@@ -202,9 +202,9 @@ func initializeForks(win *pixelgl.Window) {
 // updates: philsopohers, fork ownership, display of actions in text
 func drawNewFrame(win *pixelgl.Window) {
 	// intialize pictures
-	forkPic, _ := loadPicture("fork.png")
-	standing, _ := loadPicture("hiking.png")
-	eating, _ := loadPicture("gamer.png")
+	forkPic, _ := loadPicture("../assets/fork.png")
+	standing, _ := loadPicture("../assets/hiking.png")
+	eating, _ := loadPicture("../assets/gamer.png")
 
 	// batches for more efficient display
 	batchStand := pixel.NewBatch(&pixel.TrianglesData{}, standing)
@@ -252,7 +252,7 @@ func drawNewFrame(win *pixelgl.Window) {
 	for i := 0; i < len(philosophers); i++ {
 		spritePos := philosophers[i].spritePos
 		mat := pixel.IM
-		
+
 		if philosophers[i].eating {
 			mat = mat.ScaledXY(spritePos, pixel.V(0.18, 0.18))
 			spriteEat.Draw(batchEating, mat)
@@ -275,14 +275,14 @@ func drawNewFrame(win *pixelgl.Window) {
 	// draw latest 8 actions
 	basicTxt := text.New(pixel.V(20, 80), basicAtlas)
 	basicTxt.Color = colornames.Black
-	
+
 	if len(textSeg) > 8 {
 		// Remove the first element if the queue length exceeds 10
 		textSeg = textSeg[len(textSeg)-8:]
 	}
 
 	fmt.Fprintln(basicTxt, "Order of Actions")
-	
+
 	for _, segment := range textSeg {
 		fmt.Fprintln(basicTxt, segment)
 	}
