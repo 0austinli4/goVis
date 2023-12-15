@@ -214,7 +214,7 @@ func animateChannel(win *pixelgl.Window) {
 }
 
 func arrow(imd *imdraw.IMDraw, win *pixelgl.Window, p2 pixel.Vec, p1 pixel.Vec) {
-	fmt.Println("calling this")
+	//fmt.Println("calling this")
 	// Calculate arrow direction and length
 	dir := p2.Sub(p1)
 
@@ -238,20 +238,6 @@ func arrow(imd *imdraw.IMDraw, win *pixelgl.Window, p2 pixel.Vec, p1 pixel.Vec) 
 	imd.Push(arrowP1, arrowP3)
 	imd.Line(3)
 
-	imd.Draw(win)
-}
-
-func lineDown(imd *imdraw.IMDraw, win *pixelgl.Window, pos pixel.Vec) {
-	imd.Color = colornames.Black
-	imd.Push(pos, pixel.V(pos.X, eventChannelsS[len(eventChannelsS)-1].Y))
-	imd.Line(2)
-	imd.Draw(win)
-}
-
-func lineUp(imd *imdraw.IMDraw, win *pixelgl.Window, pos pixel.Vec, index int) {
-	imd.Color = colornames.Black
-	imd.Push(pixel.V(pos.X, eventChannelsS[len(eventChannelsS)-1].Y), pixel.V(pos.X, eventChannelsF[index].Y))
-	imd.Line(2)
 	imd.Draw(win)
 }
 

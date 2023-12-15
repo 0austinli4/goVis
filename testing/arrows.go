@@ -31,24 +31,31 @@ func (user *User) deposit(bank *Bank, amount int) {
 	defer wg.Done()
 
 	currentUser := bank.owner
-	fmt.Println(currentUser)
 
 	bank.mu.Lock()
 	acquiredTime := time.Now()
 	bank.owner = user
-	user.balance -= amount
-	bank.balance += amount
+
+	if user.balance >= amount {
+		user.balance -= amount
+		bank.balance += amount
+
+		fmt.Println(user.name, "deposited", amount, "balance", user.balance)
+	} else {
+		fmt.Println(user.name, "does not have enough to deposit", amount, "balance", user.balance)
+	}
 
 	// build-in delay
-	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+	time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 	bank.owner = nil
-	// fmt.Println(user.name, "deposited $20. balance:", user.balance)
+
 	bank.mu.Unlock()
 	funcEndTime := time.Now()
 
+
 	globalLock.Lock()
 	if currentUser != nil && currentUser.name != user.name {
-		key := user.name + fmt.Sprintln(getGID()) + " waiting for lock from \n" + currentUser.name
+		key := user.name + " " + fmt.Sprintln(getGID()) + " waiting for lock from \n" + currentUser.name
 		events[key] = [2]time.Time{funcTime, acquiredTime}
 		eventsOrder = append(eventsOrder, key)
 	}
@@ -61,26 +68,54 @@ func (user *User) deposit(bank *Bank, amount int) {
 }
 
 func (user *User) withdraw(bank *Bank, amount int) {
+	funcTime := time.Now()
 	defer wg.Done()
+
+	currentUser := bank.owner
+
 	bank.mu.Lock()
+	acquiredTime := time.Now()
 	bank.owner = user
 
-	user.balance += amount
-	bank.balance -= amount
+	if bank.balance >= amount {
+		user.balance += amount
+		bank.balance -= amount
+
+		fmt.Println(user.name, "withdrew", amount, "balance", user.balance)
+	} else {
+		fmt.Println("bank does not have enough to withdraw", amount, "balance", bank.balance)
+	}
+
 
 	// built-in delay
-	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+	time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 
 	bank.owner = nil
 	bank.mu.Unlock()
+
+	funcEndTime := time.Now()
+
+	globalLock.Lock()
+
+	if currentUser != nil && currentUser.name != user.name {
+		key := user.name + " " + fmt.Sprintln(getGID()) + " waiting for lock from \n" + currentUser.name
+		events[key] = [2]time.Time{funcTime, acquiredTime}
+		eventsOrder = append(eventsOrder, key)
+	}
+	key := fmt.Sprintln(user.name) + " attempting withdraw, goid: " + fmt.Sprintln(getGID())
+	events[key] = [2]time.Time{funcTime, funcEndTime}
+	eventsOrder = append(eventsOrder, key)
+
+	globalLock.Unlock()
 }
 
-func runSim(win *pixelgl.Window) {
+func runSim() {
 	startTime := time.Now()
 
 	users := []*User{
-		{"Brandon", 100},
-		{"Austin", 100},
+		{"Brandon", 40},
+		{"Austin", 40},
+		{"Sol", 40},
 	}
 
 	bank := Bank{
@@ -93,10 +128,17 @@ func runSim(win *pixelgl.Window) {
 		for _, user := range users {
 			wg.Add(1)
 			go user.deposit(&bank, 20)
-			time.Sleep(1 * time.Second)
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 
+	for i := 0; i < 3; i++ {
+		for _, user := range users {
+			wg.Add(1)
+			go user.withdraw(&bank, 10)
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
 	wg.Wait()
 	receiveTime := time.Now()
 
@@ -104,10 +146,7 @@ func runSim(win *pixelgl.Window) {
 	eventsOrder = append(eventsOrder, "Main")
 
 	fmt.Println("length of events", len(events))
-	animateChannel(win)
-}
 
-func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Bank",
 		Bounds: pixel.R(0, 0, 1024, 768),
@@ -118,18 +157,16 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("hello")
+
 	win.Clear((colornames.White))
+	animateChannel(win)
 	// imd := imdraw.New(nil)
 	// for !win.Closed() {
 	// 	arrow(imd, win, pixel.V(20, 20), pixel.V(200, 200))
 	// 	win.Update()
 	// }
-
-	runSim(win)
-
 }
 
 func main() {
-	pixelgl.Run(run)
+	pixelgl.Run(runSim)
 }
